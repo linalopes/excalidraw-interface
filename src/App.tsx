@@ -1,7 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ExcalidrawViewer } from './components/ExcalidrawViewer';
-import { type ExcalidrawImperativeAPI, type ExcalidrawInitialData } from '@excalidraw/excalidraw';
 import './styles.css';
+
+// Define types for Excalidraw data
+interface ExcalidrawInitialData {
+  elements: any[];
+  appState: any;
+  files: Record<string, any>;
+}
 
 /**
  * Main App component that manages the Excalidraw viewer with toolbar controls

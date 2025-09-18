@@ -1,13 +1,18 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Excalidraw } from '@excalidraw/excalidraw';
-import {
-  exportToBlob,
-  exportToSvg,
-  serializeAsJSON,
-  type ExcalidrawImperativeAPI,
-  type ExcalidrawInitialData,
-  type BinaryFileData,
-} from '@excalidraw/excalidraw';
+
+// Define types for Excalidraw data
+interface ExcalidrawInitialData {
+  elements: any[];
+  appState: any;
+  files: Record<string, any>;
+}
+
+interface ExcalidrawImperativeAPI {
+  getSceneElements: () => any[];
+  getAppState: () => any;
+  getFiles: () => Record<string, any>;
+}
 
 interface ExcalidrawViewerProps {
   /** Initial data to load into the Excalidraw scene */

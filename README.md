@@ -1,4 +1,4 @@
-# Excalidraw Viewer
+# Excalidraw Interface
 
 A minimal, production-ready viewer app for Excalidraw files built with Vite + React + TypeScript.
 
