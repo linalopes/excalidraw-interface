@@ -4,15 +4,16 @@ A minimal, production-ready viewer app for Excalidraw files built with Vite + Re
 
 ## Features
 
-- **View Excalidraw scenes** in read-only mode with pan & zoom
+- **Full Excalidraw Interface**: Complete native Excalidraw experience with all original UI elements
+- **View Excalidraw scenes** with pan & zoom capabilities
 - **Clickable links** on elements that have URLs
-- **Download functionality**:
-  - Download as `.excalidraw` (JSON format)
-  - Download as SVG
-  - Download as PNG
-- **Load local files** via file input
-- **Clean, minimal UI** with responsive design
+- **Native file operations**:
+  - Open `.excalidraw` files using the native "Open" menu
+  - Save as `.excalidraw` using the native "Save to..." option
+  - Export as SVG/PNG using the native "Export image..." option
+- **Responsive design** with full-screen Excalidraw experience
 - **Handles embedded images** correctly
+- **Sample scene included** for immediate demonstration
 
 ## Tech Stack
 
