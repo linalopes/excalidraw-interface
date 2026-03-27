@@ -17,6 +17,7 @@ export interface ExcalidrawImperativeAPI {
 
 export interface ExcalidrawElementCustomData {
   embedType?: 'iframe';
+  embedKind?: 'image' | 'video' | 'pdf' | 'iframe';
   src?: string;
   title?: string;
 }

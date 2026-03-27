@@ -18,11 +18,14 @@ interface EmbedOverlayItem {
   id: string;
   src: string;
   title: string;
+  kind: OverlayEmbedKind;
   left: number;
   top: number;
   width: number;
   height: number;
 }
+
+type OverlayEmbedKind = 'image' | 'video' | 'pdf' | 'iframe';
 
 interface OverlayEmbedElement {
   id: string;
@@ -32,6 +35,7 @@ interface OverlayEmbedElement {
   height: number;
   src: string;
   title: string;
+  kind: OverlayEmbedKind;
 }
 
 interface OverlayViewportState {
@@ -58,6 +62,44 @@ const isValidHttpsUrl = (value: string | undefined): value is string => {
   } catch {
     return false;
   }
+};
+
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'] as const;
+const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg'] as const;
+
+const inferEmbedKindFromUrl = (src: string): OverlayEmbedKind => {
+  try {
+    const url = new URL(src);
+    const pathname = url.pathname.toLowerCase();
+
+    if (pathname.endsWith('.pdf')) {
+      return 'pdf';
+    }
+    if (IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
+      return 'image';
+    }
+    if (VIDEO_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
+      return 'video';
+    }
+  } catch {
+    // URL validity is checked elsewhere; fallback to iframe.
+  }
+
+  return 'iframe';
+};
+
+const getEmbedKind = (element: ExcalidrawElement): OverlayEmbedKind => {
+  const explicitKind = element.customData?.embedKind;
+  if (explicitKind) {
+    return explicitKind;
+  }
+
+  const src = element.customData?.src;
+  if (!src) {
+    return 'iframe';
+  }
+
+  return inferEmbedKindFromUrl(src);
 };
 
 // TEMP MVP: inject a single sample rectangle embed if scene has none yet.
@@ -143,6 +185,7 @@ const getEmbedOverlayItems = (
     id: element.id,
     src: element.src,
     title: element.title,
+    kind: element.kind,
     // Excalidraw world->screen mapping:
     // screenX = (elementX + scrollX) * zoom, same for Y and size.
     left: (element.x + viewport.scrollX) * viewport.zoom,
@@ -161,6 +204,7 @@ const toOverlayEmbedElements = (elements: readonly ExcalidrawElement[]): Overlay
     height: element.height,
     src: element.customData?.src ?? '',
     title: element.customData?.title ?? 'Embedded content',
+    kind: getEmbedKind(element),
   }));
 };
 
@@ -193,7 +237,8 @@ const areOverlayEmbedListsEqual = (
       l.width !== r.width ||
       l.height !== r.height ||
       l.src !== r.src ||
-      l.title !== r.title
+      l.title !== r.title ||
+      l.kind !== r.kind
     ) {
       return false;
     }
@@ -315,6 +360,7 @@ export const ExcalidrawViewer: React.FC<ExcalidrawViewerProps> = ({
     () => embedOverlays.find((embed) => embed.id === selectedIframeId) ?? null,
     [embedOverlays, selectedIframeId],
   );
+  const canInteractSelectedOverlay = selectedOverlay?.kind === 'iframe' || selectedOverlay?.kind === 'pdf';
 
   useEffect(() => {
     const hasInteractive = interactiveIframeId
@@ -391,6 +437,7 @@ export const ExcalidrawViewer: React.FC<ExcalidrawViewerProps> = ({
         locked: false,
         customData: {
           embedType: 'iframe',
+          embedKind: inferEmbedKindFromUrl(validatedUrl),
           src: validatedUrl,
           title: embedTitle,
         },
@@ -440,6 +487,7 @@ export const ExcalidrawViewer: React.FC<ExcalidrawViewerProps> = ({
       customData: {
         ...(element.customData || {}),
         embedType: 'iframe',
+        embedKind: inferEmbedKindFromUrl(validatedUrl),
         src: validatedUrl,
         title: element.customData?.title || validatedUrl,
       },
@@ -484,18 +532,49 @@ export const ExcalidrawViewer: React.FC<ExcalidrawViewerProps> = ({
               type="button"
               className="embed-overlay-chip"
               onClick={() => handleToggleInteractive(embed.id)}
+              style={{ display: embed.kind === 'iframe' || embed.kind === 'pdf' ? 'inline-block' : 'none' }}
             >
               {interactiveIframeId === embed.id ? 'Lock' : 'Interact'}
             </button>
-            <iframe
-              src={embed.src}
-              title={embed.title}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              className={`embed-overlay-iframe ${
-                interactiveIframeId === embed.id ? 'embed-overlay-iframe--interactive' : ''
-              }`}
-            />
+            {embed.kind === 'image' && (
+              <img
+                src={embed.src}
+                alt={embed.title}
+                className="embed-overlay-media"
+                draggable={false}
+              />
+            )}
+            {embed.kind === 'video' && (
+              <video
+                src={embed.src}
+                controls
+                className="embed-overlay-media embed-overlay-media--interactive"
+              />
+            )}
+            {embed.kind === 'pdf' && (
+              <object
+                data={embed.src}
+                type="application/pdf"
+                className={`embed-overlay-object ${
+                  interactiveIframeId === embed.id ? 'embed-overlay-object--interactive' : ''
+                }`}
+              >
+                <a href={embed.src} target="_blank" rel="noopener noreferrer">
+                  Open PDF
+                </a>
+              </object>
+            )}
+            {embed.kind === 'iframe' && (
+              <iframe
+                src={embed.src}
+                title={embed.title}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                className={`embed-overlay-iframe ${
+                  interactiveIframeId === embed.id ? 'embed-overlay-iframe--interactive' : ''
+                }`}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -511,6 +590,7 @@ export const ExcalidrawViewer: React.FC<ExcalidrawViewerProps> = ({
             type="button"
             className="iframe-context-panel-button"
             onClick={() => handleToggleInteractive(selectedOverlay.id)}
+            disabled={!canInteractSelectedOverlay}
           >
             {interactiveIframeId === selectedOverlay.id ? 'Lock' : 'Interact'}
           </button>
