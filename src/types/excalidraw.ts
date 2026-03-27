@@ -4,15 +4,21 @@
  */
 
 export interface ExcalidrawInitialData {
-  elements: any[];
-  appState: any;
-  files: Record<string, any>;
+  elements: ExcalidrawElement[];
+  appState: Partial<ExcalidrawAppState>;
+  files: Record<string, unknown>;
 }
 
 export interface ExcalidrawImperativeAPI {
-  getSceneElements: () => any[];
-  getAppState: () => any;
-  getFiles: () => Record<string, any>;
+  getSceneElements: () => ExcalidrawElement[];
+  getAppState: () => ExcalidrawAppState;
+  getFiles: () => Record<string, unknown>;
+}
+
+export interface ExcalidrawElementCustomData {
+  embedType?: 'iframe';
+  src?: string;
+  title?: string;
 }
 
 export interface ExcalidrawElement {
@@ -30,16 +36,17 @@ export interface ExcalidrawElement {
   strokeStyle: string;
   roughness: number;
   opacity: number;
-  groupIds: string[];
+  groupIds: readonly string[];
   frameId: string | null;
-  roundness: any;
+  roundness: unknown;
   seed: number;
   versionNonce: number;
   isDeleted: boolean;
-  boundElements: any[];
+  boundElements: readonly unknown[];
   updated: number;
   link: string | null;
   locked: boolean;
+  customData?: ExcalidrawElementCustomData;
 }
 
 export interface ExcalidrawAppState {
@@ -55,7 +62,7 @@ export interface ExcalidrawAppState {
   currentItemFontFamily: number;
   currentItemFontSize: number;
   currentItemTextAlign: string;
-  currentItemStartArrowhead: any;
+  currentItemStartArrowhead: unknown;
   currentItemEndArrowhead: string;
   scrollX: number;
   scrollY: number;
