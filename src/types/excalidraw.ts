@@ -42,7 +42,7 @@ export interface ExcalidrawElement {
   seed: number;
   versionNonce: number;
   isDeleted: boolean;
-  boundElements: readonly unknown[];
+  boundElements: readonly unknown[] | null;
   updated: number;
   link: string | null;
   locked: boolean;
