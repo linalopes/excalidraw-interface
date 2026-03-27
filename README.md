@@ -1,16 +1,16 @@
 # Excalidraw Interface
 
-A Vite + React + TypeScript app that preserves the native Excalidraw experience while adding a custom HTML iframe overlay layer.  
-Embeds are represented by regular Excalidraw rectangle placeholders and rendered as DOM iframes above the canvas, staying aligned during pan and zoom.
+An experimental Excalidraw wrapper built with Vite + React + TypeScript.  
+It keeps the native Excalidraw experience and adds a custom media overlay layer on top of rectangle placeholders. Depending on URL and metadata, embeds render as `img`, `video`, `object` (PDF), or `iframe`, and stay aligned during pan and zoom.
 
 ## Features
 
 - Native Excalidraw UI and canvas behavior
 - Scene loading from `public/sample.excalidraw` on startup
-- Iframe overlay MVP driven by element `customData`
+- Media-aware overlay rendering driven by element `customData`
 - `https://` URL validation for embeds
-- Per-embed `Interact / Lock` controls
-- Contextual controls for selected iframe placeholders:
+- Per-embed interaction behavior by content type
+- Contextual controls for selected embed placeholders:
   - Interact / Lock
   - Change URL
   - Open in new tab
@@ -58,36 +58,56 @@ npm run preview
 
 ## How it works
 
-The iframe feature is intentionally implemented outside Excalidraw internals.
+The embed layer is intentionally implemented outside Excalidraw internals.
 
 1. **Rectangle placeholder in scene**
    - A normal Excalidraw rectangle is used as the visual anchor.
 2. **Embed metadata in `customData`**
-   - The rectangle carries iframe metadata (`embedType`, `src`, `title`).
+   - The rectangle carries metadata (`embedType`, `embedKind`, `src`, `title`).
+   - `embedKind` can be explicit, or inferred from URL extension.
 3. **HTML overlay layer above canvas**
-   - React renders absolute-positioned iframes in a DOM layer over Excalidraw.
+   - React renders absolute-positioned media elements in a DOM layer over Excalidraw.
    - Screen coordinates are derived from element position/size + Excalidraw scroll/zoom.
-4. **Interact / Lock mode**
-   - Locked: iframe uses `pointer-events: none` so canvas navigation works normally.
-   - Interactive: iframe uses `pointer-events: auto`.
-   - Only one iframe can be interactive at a time; `Esc` locks all.
+4. **Kind-specific rendering**
+   - Images -> `<img>`
+   - Direct video URLs -> `<video controls>`
+   - PDFs -> `<object type="application/pdf">`
+   - Everything else -> `<iframe>`
+5. **Interaction model**
+   - Images are non-interactive.
+   - Videos are interactive by default (play/pause/scrub immediately).
+   - Web-page iframes use explicit `Interact / Lock`.
+   - Only one iframe/PDF embed can be in interactive mode at a time; `Esc` locks all.
+
+## Supported content
+
+- Direct image URLs (`.jpg`, `.jpeg`, `.png`, `.gif`, `.webp`, `.svg`)
+- Direct video URLs (`.mp4`, `.webm`, `.ogg`)
+- PDF files (`.pdf`)
+- Embeddable web pages (fallback `iframe` mode)
+- Some sites cannot be embedded due to browser/security policies (for example CSP or `X-Frame-Options`)
 
 ## Usage
 
 1. Start the app and wait for the sample scene to load.
 2. Add an embed using the `Add iframe` action and provide a valid `https://` URL.
 3. Move/resize the rectangle placeholder directly in Excalidraw.
-4. Select the iframe placeholder to open contextual actions:
+4. Select the embed placeholder to open contextual actions:
    - Toggle `Interact / Lock`
    - Change URL
    - Open in new tab
-5. Pan and zoom the canvas; the iframe overlay remains aligned with its placeholder.
+5. Content behavior depends on URL type:
+   - Images fit the placeholder and remain non-interactive.
+   - Videos are immediately usable with native controls.
+   - PDFs and web pages use embed mode; web pages require `Interact` first.
+6. Pan and zoom the canvas; the overlay remains aligned with its placeholder.
 
 ## Current limitations
 
 - Only `https://` embed URLs are accepted.
 - Some sites cannot be embedded due to browser security headers (e.g. `X-Frame-Options`, CSP).
-- Only one iframe is interactive at a time.
+- Only one iframe/PDF embed can be interactive at a time.
+- HTML overlays render above the Excalidraw canvas; canvas text/shapes do not currently render on top of live overlays.
 - Excalidraw export outputs the drawing; live iframe DOM content is not preserved as interactive content.
 
 ## Project Structure
@@ -95,7 +115,7 @@ The iframe feature is intentionally implemented outside Excalidraw internals.
 ```text
 src/
 ├── components/
-│   └── ExcalidrawViewer.tsx    # Excalidraw wrapper + iframe overlay and controls
+│   └── ExcalidrawViewer.tsx    # Excalidraw wrapper + media overlay and controls
 ├── App.tsx                     # App shell and sample scene loading
 ├── main.tsx                    # React entry point
 └── styles.css                  # Global and overlay styles
@@ -104,20 +124,21 @@ public/
 └── sample.excalidraw           # Sample scene loaded on startup
 ```
 
-## API Reference
+## Component Contract
 
 ### `ExcalidrawViewer` Props
 
 - `initialData: ExcalidrawInitialData` - Scene data used for initial load.
 - `onApiReady: (api: ExcalidrawImperativeAPI) => void` - Callback with minimal imperative API.
 
-### Iframe `customData` contract
+### Embed `customData` contract
 
-Attach iframe metadata to a rectangle-like Excalidraw element:
+Attach embed metadata to a rectangle-like Excalidraw element:
 
 ```ts
 {
   embedType?: "iframe";
+  embedKind?: "image" | "video" | "pdf" | "iframe";
   src?: string;   // must be https://
   title?: string;
 }
@@ -128,6 +149,7 @@ Attach iframe metadata to a rectangle-like Excalidraw element:
 - Persist embed metadata and interaction preferences more explicitly in scene data.
 - Better contextual panel placement near viewport edges.
 - Optional domain allowlist/blocklist for embed URLs.
+- Optional fit-mode controls (`contain` vs `cover`) per embed.
 - Improved UX for creating embeds without prompts.
 
 ## Browser Support
