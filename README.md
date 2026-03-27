@@ -1,26 +1,27 @@
 # Excalidraw Interface
 
-A minimal, production-ready viewer app for Excalidraw files built with Vite + React + TypeScript.
+A Vite + React + TypeScript app that preserves the native Excalidraw experience while adding a custom HTML iframe overlay layer.  
+Embeds are represented by regular Excalidraw rectangle placeholders and rendered as DOM iframes above the canvas, staying aligned during pan and zoom.
 
 ## Features
 
-- **Full Excalidraw Interface**: Complete native Excalidraw experience with all original UI elements
-- **View Excalidraw scenes** with pan & zoom capabilities
-- **Clickable links** on elements that have URLs
-- **Native file operations**:
-  - Open `.excalidraw` files using the native "Open" menu
-  - Save as `.excalidraw` using the native "Save to..." option
-  - Export as SVG/PNG using the native "Export image..." option
-- **Responsive design** with full-screen Excalidraw experience
-- **Handles embedded images** correctly
-- **Sample scene included** for immediate demonstration
+- Native Excalidraw UI and canvas behavior
+- Scene loading from `public/sample.excalidraw` on startup
+- Iframe overlay MVP driven by element `customData`
+- `https://` URL validation for embeds
+- Per-embed `Interact / Lock` controls
+- Contextual controls for selected iframe placeholders:
+  - Interact / Lock
+  - Change URL
+  - Open in new tab
+- Native Excalidraw file actions (`Open`, `Save to...`, `Export image...`)
 
 ## Tech Stack
 
-- **Vite** - Build tool and dev server
-- **React 18** - UI framework
-- **TypeScript** - Type safety
-- **@excalidraw/excalidraw** - Excalidraw component library
+- Vite
+- React 18
+- TypeScript
+- `@excalidraw/excalidraw`
 
 ## Getting Started
 
@@ -41,7 +42,7 @@ npm install
 npm run dev
 ```
 
-3. Open your browser to `http://localhost:3000`
+3. Open `http://localhost:3000`
 
 ### Build for Production
 
@@ -55,24 +56,49 @@ npm run build
 npm run preview
 ```
 
+## How it works
+
+The iframe feature is intentionally implemented outside Excalidraw internals.
+
+1. **Rectangle placeholder in scene**
+   - A normal Excalidraw rectangle is used as the visual anchor.
+2. **Embed metadata in `customData`**
+   - The rectangle carries iframe metadata (`embedType`, `src`, `title`).
+3. **HTML overlay layer above canvas**
+   - React renders absolute-positioned iframes in a DOM layer over Excalidraw.
+   - Screen coordinates are derived from element position/size + Excalidraw scroll/zoom.
+4. **Interact / Lock mode**
+   - Locked: iframe uses `pointer-events: none` so canvas navigation works normally.
+   - Interactive: iframe uses `pointer-events: auto`.
+   - Only one iframe can be interactive at a time; `Esc` locks all.
+
 ## Usage
 
-1. **View the sample scene**: The app loads a sample Excalidraw scene on startup
-2. **Open local files**: Use the "Open .excalidraw" button to load your own files
-3. **Download scenes**: Use the download buttons to export the current scene in different formats
-4. **Navigate**: Pan and zoom using mouse/touch gestures (hand tool is enabled)
+1. Start the app and wait for the sample scene to load.
+2. Add an embed using the `Add iframe` action and provide a valid `https://` URL.
+3. Move/resize the rectangle placeholder directly in Excalidraw.
+4. Select the iframe placeholder to open contextual actions:
+   - Toggle `Interact / Lock`
+   - Change URL
+   - Open in new tab
+5. Pan and zoom the canvas; the iframe overlay remains aligned with its placeholder.
+
+## Current limitations
+
+- Only `https://` embed URLs are accepted.
+- Some sites cannot be embedded due to browser security headers (e.g. `X-Frame-Options`, CSP).
+- Only one iframe is interactive at a time.
+- Excalidraw export outputs the drawing; live iframe DOM content is not preserved as interactive content.
 
 ## Project Structure
 
-```
+```text
 src/
 ├── components/
-│   └── ExcalidrawViewer.tsx    # Main Excalidraw component wrapper
-├── lib/
-│   └── download.ts             # Download utility functions
-├── App.tsx                     # Main app component with toolbar
+│   └── ExcalidrawViewer.tsx    # Excalidraw wrapper + iframe overlay and controls
+├── App.tsx                     # App shell and sample scene loading
 ├── main.tsx                    # React entry point
-└── styles.css                  # Global styles
+└── styles.css                  # Global and overlay styles
 
 public/
 └── sample.excalidraw           # Sample scene loaded on startup
@@ -80,16 +106,29 @@ public/
 
 ## API Reference
 
-### ExcalidrawViewer Props
+### `ExcalidrawViewer` Props
 
-- `initialData: ExcalidrawInitialData` - The scene data to display
-- `onApiReady: (api: ExcalidrawImperativeAPI) => void` - Callback when API is ready
+- `initialData: ExcalidrawInitialData` - Scene data used for initial load.
+- `onApiReady: (api: ExcalidrawImperativeAPI) => void` - Callback with minimal imperative API.
 
-### Download Functions
+### Iframe `customData` contract
 
-- `downloadJson(filename: string, data: object)` - Download JSON data
-- `downloadBlob(filename: string, blob: Blob)` - Download blob data
-- `downloadSvg(filename: string, svg: SVGSVGElement)` - Download SVG element
+Attach iframe metadata to a rectangle-like Excalidraw element:
+
+```ts
+{
+  embedType?: "iframe";
+  src?: string;   // must be https://
+  title?: string;
+}
+```
+
+## Roadmap (optional future work)
+
+- Persist embed metadata and interaction preferences more explicitly in scene data.
+- Better contextual panel placement near viewport edges.
+- Optional domain allowlist/blocklist for embed URLs.
+- Improved UX for creating embeds without prompts.
 
 ## Browser Support
 
